@@ -3,3 +3,5 @@ amountOfFakePlayers: 4
 invisibility: false
 autoBanOnXPlayers: 3
 silentBan: true
+randomlyRun: true
+runEvery: 2400

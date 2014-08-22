@@ -46,6 +46,7 @@ public class AntiAura extends JavaPlugin implements Listener {
     public int autoBanCount;
     private boolean isRegistered;
     private boolean silentBan;
+    private int runEvery;
     public static final Random RANDOM = new Random();
 
     public void onEnable() {
@@ -53,7 +54,20 @@ public class AntiAura extends JavaPlugin implements Listener {
         POSITIONS = getPositionsForAmount(this.getConfig().getInt("amountOfFakePlayers"));
         autoBanCount = this.getConfig().getInt("autoBanOnXPlayers");
         silentBan = this.getConfig().getBoolean("silentBan");
+        runEvery = this.getConfig().getInt("runEvery");
         this.getServer().getPluginManager().registerEvents(this, this);
+        
+        if(this.getConfig().getBoolean("randomlyRun")) {
+            Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+                @Override
+                public void run() {
+                    if(Bukkit.getOnlinePlayers().length > 0) {
+                        String player = org.bukkit.Bukkit.getOnlinePlayers()[RANDOM.nextInt(Bukkit.getOnlinePlayers().length)].getName();
+                        org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "auracheck " + player);
+                    }
+                }
+            }, 800L, runEvery);
+        }
     }
 
     public ImmutableList<Vector> getPositionsForAmount(int total) {
@@ -128,7 +142,7 @@ public class AntiAura extends JavaPlugin implements Listener {
                 if (invoker instanceof Player && !((Player) invoker).isOnline()) {
                     return;
                 }
-                invoker.sendMessage(ChatColor.DARK_PURPLE + "Aura check result: killed " + result.getKey() + " out of " + result.getValue());
+                invoker.sendMessage(ChatColor.DARK_PURPLE + "Aura check on " + player.getName() + " result: killed " + result.getKey() + " out of " + result.getValue());
                 double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("ticksToKill", 10) / 20);
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Check length: " + timeTaken + " seconds.");
                 if(result.getKey() >= autoBanCount) {
