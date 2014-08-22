@@ -56,7 +56,7 @@ public class AuraCheck {
         this.invoker = player;
         this.started = System.currentTimeMillis();
 
-        for (int i = 0; i <= 4; i++) {
+        for (int i = 0; i <= 3; i++) {
             for(Vector vec : AntiAura.POSITIONS) {
                 WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(MULTIPLIERS[0][1]*vec.getX(),0,MULTIPLIERS[i][1]*vec.getZ()).toVector(), plugin);
                 entitiesSpawned.put(wrapper.getEntityID(), false);
@@ -69,7 +69,7 @@ public class AuraCheck {
             public void run() {
                 AbstractMap.SimpleEntry<Integer, Integer> result = end();
                 plugin.remove(checked.getUniqueId());
-                callback.done(started,finished,result,invoker);
+                callback.done(started,finished,result,invoker,checked);
             }
         }, plugin.getConfig().getInt("ticksToKill",10));
     }
@@ -124,7 +124,7 @@ public class AuraCheck {
     }
 
     public interface Callback {
-        public void done(long started, long finished, AbstractMap.SimpleEntry<Integer, Integer> result, CommandSender invoker);
+        public void done(long started, long finished, AbstractMap.SimpleEntry<Integer, Integer> result, CommandSender invoker, Player target);
     }
 
 }

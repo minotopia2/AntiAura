@@ -23,33 +23,36 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
 import com.google.common.collect.ImmutableList;
+import java.util.AbstractMap;
+import java.util.HashMap;
+import java.util.Random;
+import java.util.UUID;
+import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.UUID;
-
 
 public class AntiAura extends JavaPlugin implements Listener {
     private HashMap<UUID, AuraCheck> running = new HashMap<>();
     public static ImmutableList<Vector> POSITIONS;
+    public int autoBanCount;
     private boolean isRegistered;
+    private boolean silentBan;
     public static final Random RANDOM = new Random();
 
     public void onEnable() {
         this.saveDefaultConfig();
         POSITIONS = getPositionsForAmount(this.getConfig().getInt("amountOfFakePlayers"));
+        autoBanCount = this.getConfig().getInt("autoBanOnXPlayers");
+        silentBan = this.getConfig().getBoolean("silentBan");
         this.getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -121,13 +124,19 @@ public class AntiAura extends JavaPlugin implements Listener {
 
         check.invoke(sender, new AuraCheck.Callback() {
             @Override
-            public void done(long started, long finished, AbstractMap.SimpleEntry<Integer, Integer> result, CommandSender invoker) {
+            public void done(long started, long finished, AbstractMap.SimpleEntry<Integer, Integer> result, CommandSender invoker, Player player) {
                 if (invoker instanceof Player && !((Player) invoker).isOnline()) {
                     return;
                 }
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Aura check result: killed " + result.getKey() + " out of " + result.getValue());
                 double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("ticksToKill", 10) / 20);
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Check length: " + timeTaken + " seconds.");
+                if(result.getKey() >= autoBanCount) {
+                    Bukkit.getBanList(BanList.Type.NAME).addBan(player.getName(), "ANTI-AURA: Hit ban limit", null, "AntiAura-AutoBan");
+                    if(!silentBan) {
+                        player.kickPlayer("ANTI-AURA: Hit limit reached");
+                    }
+                }
             }
         });
         return true;
