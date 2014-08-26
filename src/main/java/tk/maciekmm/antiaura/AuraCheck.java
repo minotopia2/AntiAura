@@ -32,12 +32,8 @@ import java.util.UUID;
 
 
 public class AuraCheck {
-                                                /*
-                                                  -x,y | x,y
-                                                 ------|------
-                                                  -x,-y| x,-y
-                                                 */
-    public static final short[][] MULTIPLIERS = {{1,1},{-1,1},{-1,-1},{1,-1}};
+    public static final short[][] standing = {{0,1},{-1,0},{1,0},{0,-1},{1,1},{-1,-1},{-1,1},{1,-1}};
+    public static final short[][] running = {{0,2},{-2,0},{2,0},{0,-2},{1,1},{2,2},{-1,-1},{-2,-2},{-1,1},{-2,2},{1,-1},{2,-2}};
 
     private final AntiAura plugin;
     private HashMap<Integer, Boolean> entitiesSpawned = new HashMap<>();
@@ -45,6 +41,8 @@ public class AuraCheck {
     private Player checked;
     private long started;
     private long finished = Long.MAX_VALUE;
+    private int i = -1;
+    private int z;
 
 
     public AuraCheck(AntiAura plugin, Player checked) {
@@ -52,17 +50,34 @@ public class AuraCheck {
         this.checked = checked;
     }
 
-    public void invoke(CommandSender player,final Callback callback) {
+    public void invoke(CommandSender player, String type, final Callback callback) {
         this.invoker = player;
         this.started = System.currentTimeMillis();
-
-        for (int i = 0; i <= 3; i++) {
-            for(Vector vec : AntiAura.POSITIONS) {
-                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(MULTIPLIERS[0][1]*vec.getX(),0,MULTIPLIERS[i][1]*vec.getZ()).toVector(), plugin);
+        
+        if(type.equalsIgnoreCase("running")) {
+            while(z < AntiAura.total) {
+                z++;
+                i++;
+                if(i == 12) {
+                    i = 0;
+                }
+                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(running[i][0],0,running[i][1]).toVector(), plugin);
+                entitiesSpawned.put(wrapper.getEntityID(), false);
+                wrapper.sendPacket(this.checked);
+            }
+        } else {
+            while(z < AntiAura.total) {
+                z++;
+                i++;
+                if(i == 7) {
+                    i = 0;
+                }
+                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(standing[i][0],0,standing[i][1]).toVector(), plugin);
                 entitiesSpawned.put(wrapper.getEntityID(), false);
                 wrapper.sendPacket(this.checked);
             }
         }
+        i = -1;
 
         Bukkit.getScheduler().runTaskLater(this.plugin, new Runnable() {
             @Override
