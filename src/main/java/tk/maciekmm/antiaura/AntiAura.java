@@ -26,6 +26,7 @@ import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
+import java.util.logging.Level;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -155,6 +156,7 @@ public class AntiAura extends JavaPlugin implements Listener {
                 double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("settings.ticksToKill", 10) / 20);
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Check length: " + timeTaken + " seconds.");
                 if(result.getKey() >= autoBanCount) {
+                    getLogger().log(Level.INFO, "Banning player {0} for going beyond AntiAura threshold.", player.getName());
                     if(!customCommandToggle) {
                         Bukkit.getBanList(BanList.Type.NAME).addBan(player.getName(), banMessage, null, "AntiAura-AutoBan");
                     } else {
