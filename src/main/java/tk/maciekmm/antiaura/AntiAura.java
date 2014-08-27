@@ -49,24 +49,28 @@ public class AntiAura extends JavaPlugin implements Listener {
     private static String kickMessage;
     private String typeCmd;
     private String type;
+    private String customCommand;
+    private boolean customCommandToggle;
     public static final Random RANDOM = new Random();
 
     public void onEnable() {
         this.saveDefaultConfig();
-        total = this.getConfig().getInt("amountOfFakePlayers", 16);
-        autoBanCount = this.getConfig().getInt("autoBanOnXPlayers", 3);
-        silentBan = this.getConfig().getBoolean("silentBan", true);
-        runEvery = this.getConfig().getInt("runEvery", 2400);
-        banMessage = this.getConfig().getString("banMessage", "ANTI-AURA: Passed threshold");
-        kickMessage = this.getConfig().getString("kickMessage", "ANTI-AURA: Passed threshold");
-        type = this.getConfig().getString("defaultType", "running");
+        total = this.getConfig().getInt("settings.amountOfFakePlayers", 16);
+        autoBanCount = this.getConfig().getInt("settings.autoBanOnXPlayers", 3);
+        silentBan = this.getConfig().getBoolean("settings.silentBan", true);
+        runEvery = this.getConfig().getInt("settings.runEvery", 2400);
+        banMessage = this.getConfig().getString("messages.banMessage", "ANTI-AURA: Passed threshold");
+        kickMessage = this.getConfig().getString("messages.kickMessage", "ANTI-AURA: Passed threshold");
+        type = this.getConfig().getString("settings.defaultType", "running");
+        customCommandToggle = this.getConfig().getBoolean("customBanCommand.enable", false);
+        customCommand = this.getConfig().getString("customBanCommand.command", "ban %player");
         this.getServer().getPluginManager().registerEvents(this, this);
         
         if(type.equalsIgnoreCase("running") || type.equalsIgnoreCase("standing")) {
         } else {
             type = "running";
         }
-        if(this.getConfig().getBoolean("randomlyRun")) {
+        if(this.getConfig().getBoolean("settings.randomlyRun")) {
             Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
                 @Override
                 public void run() {
@@ -148,11 +152,15 @@ public class AntiAura extends JavaPlugin implements Listener {
                     return;
                 }
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Aura check on " + player.getName() + " result: killed " + result.getKey() + " out of " + result.getValue());
-                double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("ticksToKill", 10) / 20);
+                double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("settings.ticksToKill", 10) / 20);
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Check length: " + timeTaken + " seconds.");
                 if(result.getKey() >= autoBanCount) {
-                    Bukkit.getBanList(BanList.Type.NAME).addBan(player.getName(), banMessage, null, "AntiAura-AutoBan");
-                    if(!silentBan) {
+                    if(!customCommandToggle) {
+                        Bukkit.getBanList(BanList.Type.NAME).addBan(player.getName(), banMessage, null, "AntiAura-AutoBan");
+                    } else {
+                        org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), customCommand.replace("%player", player.getName()));
+                    }
+                    if(!silentBan && !customCommandToggle) {
                         player.kickPlayer(kickMessage);
                     }
                 }

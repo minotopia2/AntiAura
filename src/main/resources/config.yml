@@ -1,10 +1,15 @@
-ticksToKill: 10 # Ticks till removal
-amountOfFakePlayers: 16 # Amount to spawn
-invisibility: false # Invisible players or not
-autoBanOnXPlayers: 3 # If someone kills this many, they will be autobanned
-silentBan: true # If false, user will be kicked on ban
-randomlyRun: true # Randomly select a player
-runEvery: 2400 # If above is true, how many ticks between each check
-defaultType: "running" # Running or standing style
-banMessage: "ANTI-AURA: Passed threshold" # Ban message
-kickMessage: "ANTI-AURA: Passed threshold" # Kick message
+settings:
+    ticksToKill: 10 # Ticks till removal
+    amountOfFakePlayers: 16 # Amount to spawn
+    invisibility: false # Invisible players or not
+    autoBanOnXPlayers: 3 # If someone kills this many, they will be autobanned
+    silentBan: true # If false, user will be kicked on ban, always enabled if using a custom command
+    randomlyRun: true # Randomly select a player
+    runEvery: 2400 # If above is true, how many ticks between each check
+    defaultType: "running" # Running or standing style
+messages:
+    banMessage: "ANTI-AURA: Passed threshold" # Ban message
+    kickMessage: "ANTI-AURA: Passed threshold" # Kick message
+customBanCommand:
+    enable: false
+    command: ban %player

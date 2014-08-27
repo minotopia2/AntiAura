@@ -69,7 +69,7 @@ public class AuraCheck {
             while(z < AntiAura.total) {
                 z++;
                 i++;
-                if(i == 7) {
+                if(i == 8) {
                     i = 0;
                 }
                 WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(standing[i][0],0,standing[i][1]).toVector(), plugin);
@@ -86,7 +86,7 @@ public class AuraCheck {
                 plugin.remove(checked.getUniqueId());
                 callback.done(started,finished,result,invoker,checked);
             }
-        }, plugin.getConfig().getInt("ticksToKill",10));
+        }, plugin.getConfig().getInt("settings.ticksToKill",10));
     }
 
     public void markAsKilled(Integer val) {
@@ -125,7 +125,7 @@ public class AuraCheck {
         wrapper.setYaw(0);
         wrapper.setPitch(-45);
         WrappedDataWatcher watcher = new WrappedDataWatcher();
-        watcher.setObject(0, plugin.getConfig().getBoolean("invisibility", false) ? (Byte) (byte) 0x20 : (byte) 0);
+        watcher.setObject(0, plugin.getConfig().getBoolean("settings.invisibility", false) ? (Byte) (byte) 0x20 : (byte) 0);
         watcher.setObject(6, (Float) (float) 0.5);
         watcher.setObject(11, (Byte) (byte) 1);
         wrapper.setMetadata(watcher);
