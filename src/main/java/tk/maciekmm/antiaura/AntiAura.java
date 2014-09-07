@@ -52,6 +52,8 @@ public class AntiAura extends JavaPlugin implements Listener {
     private String type;
     private String customCommand;
     private boolean customCommandToggle;
+    private boolean visOrInvisible;
+    private boolean vis;
     public static final Random RANDOM = new Random();
 
     public void onEnable() {
@@ -65,6 +67,7 @@ public class AntiAura extends JavaPlugin implements Listener {
         type = this.getConfig().getString("settings.defaultType", "running");
         customCommandToggle = this.getConfig().getBoolean("customBanCommand.enable", false);
         customCommand = this.getConfig().getString("customBanCommand.command", "ban %player");
+        visOrInvisible = this.getConfig().getBoolean("settings.invisibility", false);
         this.getServer().getPluginManager().registerEvents(this, this);
         
         if(type.equalsIgnoreCase("running") || type.equalsIgnoreCase("standing")) {
@@ -142,11 +145,21 @@ public class AntiAura extends JavaPlugin implements Listener {
         } else {
             typeCmd = type;
         }
+        
+        if(args.length == 3) {
+            if(args[2].equalsIgnoreCase("visible") || args[2].equalsIgnoreCase("invisible")) {
+                vis = Boolean.getBoolean(args[2]);
+            } else {
+                vis = visOrInvisible;
+            }
+        } else {
+            vis = visOrInvisible;
+        }
 
         AuraCheck check = new AuraCheck(this, player);
         running.put(player.getUniqueId(), check);
 
-        check.invoke(sender, typeCmd, new AuraCheck.Callback() {
+        check.invoke(sender, typeCmd, vis, new AuraCheck.Callback() {
             @Override
             public void done(long started, long finished, AbstractMap.SimpleEntry<Integer, Integer> result, CommandSender invoker, Player player) {
                 if (invoker instanceof Player && !((Player) invoker).isOnline()) {

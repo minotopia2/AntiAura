@@ -50,7 +50,7 @@ public class AuraCheck {
         this.checked = checked;
     }
 
-    public void invoke(CommandSender player, String type, final Callback callback) {
+    public void invoke(CommandSender player, String type, boolean visOrInvisible, final Callback callback) {
         this.invoker = player;
         this.started = System.currentTimeMillis();
         
@@ -61,7 +61,7 @@ public class AuraCheck {
                 if(i == 12) {
                     i = 0;
                 }
-                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(running[i][0],0,running[i][1]).toVector(), plugin);
+                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(running[i][0],0,running[i][1]).toVector(), plugin, visOrInvisible);
                 entitiesSpawned.put(wrapper.getEntityID(), false);
                 wrapper.sendPacket(this.checked);
             }
@@ -72,7 +72,7 @@ public class AuraCheck {
                 if(i == 8) {
                     i = 0;
                 }
-                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(standing[i][0],0,standing[i][1]).toVector(), plugin);
+                WrapperPlayServerNamedEntitySpawn wrapper = getWrapper(this.checked.getLocation().add(standing[i][0],0,standing[i][1]).toVector(), plugin, visOrInvisible);
                 entitiesSpawned.put(wrapper.getEntityID(), false);
                 wrapper.sendPacket(this.checked);
             }
@@ -116,7 +116,7 @@ public class AuraCheck {
 
     }
 
-    public static WrapperPlayServerNamedEntitySpawn getWrapper(Vector loc, AntiAura plugin) {
+    public static WrapperPlayServerNamedEntitySpawn getWrapper(Vector loc, AntiAura plugin, boolean visOrInvisible) {
         WrapperPlayServerNamedEntitySpawn wrapper = new WrapperPlayServerNamedEntitySpawn();
         wrapper.setEntityID(AntiAura.RANDOM.nextInt(20000));
         wrapper.setPosition(loc);
@@ -125,7 +125,7 @@ public class AuraCheck {
         wrapper.setYaw(0);
         wrapper.setPitch(-45);
         WrappedDataWatcher watcher = new WrappedDataWatcher();
-        watcher.setObject(0, plugin.getConfig().getBoolean("settings.invisibility", false) ? (Byte) (byte) 0x20 : (byte) 0);
+        watcher.setObject(0, visOrInvisible ? (Byte) (byte) 0x20 : (byte) 0);
         watcher.setObject(6, (Float) (float) 0.5);
         watcher.setObject(11, (Byte) (byte) 1);
         wrapper.setMetadata(watcher);
