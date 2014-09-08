@@ -5,6 +5,7 @@ settings:
     autoBanOnXPlayers: 3 # If someone kills this many, they will be autobanned
     silentBan: true # If false, user will be kicked on ban, always enabled if using a custom command
     randomlyRun: true # Randomly select a player
+    min-players-to-autorun: 5 # Minimum players to to the auto check
     runEvery: 2400 # If above is true, how many ticks between each check
     defaultType: "running" # Running or standing style
 messages:
@@ -13,3 +14,6 @@ messages:
 customBanCommand:
     enable: false
     command: ban %player
+player-checks:
+    world: true
+    max-to-check: 10

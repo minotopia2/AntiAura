@@ -40,6 +40,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 
 public class AntiAura extends JavaPlugin implements Listener {
+
     private HashMap<UUID, AuraCheck> running = new HashMap<>();
     public static int total;
     private static int autoBanCount;
@@ -55,6 +56,11 @@ public class AntiAura extends JavaPlugin implements Listener {
     private boolean visOrInvisible;
     private boolean visCmd;
     public static final Random RANDOM = new Random();
+    private int minToAutoRun;
+    private boolean worldPvpCheck;
+    private boolean iCanHasPVP = false;
+    private int count = 0;
+    private int maxToCheck;
 
     public void onEnable() {
         this.saveDefaultConfig();
@@ -68,6 +74,9 @@ public class AntiAura extends JavaPlugin implements Listener {
         customCommandToggle = this.getConfig().getBoolean("customBanCommand.enable", false);
         customCommand = this.getConfig().getString("customBanCommand.command", "ban %player");
         visOrInvisible = this.getConfig().getBoolean("settings.invisibility", false);
+        minToAutoRun = this.getConfig().getInt("settings.min-players-to-autorun", 5);
+        worldPvpCheck = this.getConfig().getBoolean("player-checks.world", true);
+        maxToCheck = this.getConfig().getInt("player-checks.max-to-check", 10);
         this.getServer().getPluginManager().registerEvents(this, this);
         
         if(type.equalsIgnoreCase("running") || type.equalsIgnoreCase("standing")) {
@@ -78,13 +87,40 @@ public class AntiAura extends JavaPlugin implements Listener {
             Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
                 @Override
                 public void run() {
-                    if(Bukkit.getOnlinePlayers().length > 0) {
-                        String player = org.bukkit.Bukkit.getOnlinePlayers()[RANDOM.nextInt(Bukkit.getOnlinePlayers().length)].getName();
-                        org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "auracheck " + player);
+                    if(Bukkit.getOnlinePlayers().length > minToAutoRun) {
+                        if(worldPvpCheck) {
+                            findPlayerWorld();
+                        } else {
+                            autoCheckExecute(getRandomPlayer().getName());
+                        }
                     }
                 }
             }, 800L, runEvery);
         }
+    }
+    
+    public Player getRandomPlayer() {
+        return org.bukkit.Bukkit.getOnlinePlayers()[RANDOM.nextInt(Bukkit.getOnlinePlayers().length)];
+    }
+    
+    public void findPlayerWorld() {
+        while(!iCanHasPVP) {
+            if(count > maxToCheck) {
+                count = 0;
+                break;
+            }
+            Player player = getRandomPlayer();
+            count++;
+            if(player.getWorld().getPVP()) {
+                iCanHasPVP = true;
+                autoCheckExecute(player.getName());
+            }
+        }
+        iCanHasPVP = false;
+    }
+
+    public void autoCheckExecute(String player) {
+        org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "auracheck " + player);
     }
 
     public void register() {
