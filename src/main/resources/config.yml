@@ -17,3 +17,6 @@ customBanCommand:
 player-checks:
     world: true
     max-to-check: 10
+    on-pvp:
+        enabled: false
+        time-delay: 60

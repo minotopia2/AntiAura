@@ -32,35 +32,43 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 
 public class AntiAura extends JavaPlugin implements Listener {
 
     private HashMap<UUID, AuraCheck> running = new HashMap<>();
-    public static int total;
-    private static int autoBanCount;
+    private HashMap<UUID, Long> lastHit = new HashMap<>();
+    private boolean notifyPermission;
+    private boolean randomCheckOnFight;
+    private boolean worldPvpCheck;
+    private boolean iCanHasPVP = false;
     private boolean isRegistered;
-    private static boolean silentBan;
-    private static int runEvery;
-    private static String banMessage;
-    private static String kickMessage;
-    private String typeCmd;
-    private String type;
-    private String customCommand;
     private boolean customCommandToggle;
     private boolean visOrInvisible;
     private boolean visCmd;
-    public static final Random RANDOM = new Random();
+    private static boolean silentBan;
+    private String typeCmd;
+    private String type;
+    private String customCommand;
+    private static String banMessage;
+    private static String kickMessage;
     private int minToAutoRun;
-    private boolean worldPvpCheck;
-    private boolean iCanHasPVP = false;
     private int count = 0;
     private int maxToCheck;
+    private int fightTimeDelay;
+    private static int runEvery;
+    public static int total;
+    private static int autoBanCount;
+    private long fightTimeDelayTrue;
+    public static final Random RANDOM = new Random();
 
     public void onEnable() {
         this.saveDefaultConfig();
@@ -77,12 +85,18 @@ public class AntiAura extends JavaPlugin implements Listener {
         minToAutoRun = this.getConfig().getInt("settings.min-players-to-autorun", 5);
         worldPvpCheck = this.getConfig().getBoolean("player-checks.world", true);
         maxToCheck = this.getConfig().getInt("player-checks.max-to-check", 10);
+        notifyPermission = this.getConfig().getBoolean("settings.notify-users-with-permission", false);
+        randomCheckOnFight = this.getConfig().getBoolean("player-checks.on-pvp.enabled", true);
+        fightTimeDelay = this.getConfig().getInt("player-checks.on-pvp.time-delay", 60);
+        
+        fightTimeDelayTrue = fightTimeDelay * 1000L;
+        
         this.getServer().getPluginManager().registerEvents(this, this);
         
-        if(type.equalsIgnoreCase("running") || type.equalsIgnoreCase("standing")) {
-        } else {
+        if(!(type.equalsIgnoreCase("running") || type.equalsIgnoreCase("standing"))) {
             type = "running";
         }
+        
         if(this.getConfig().getBoolean("settings.randomlyRun")) {
             Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
                 @Override
@@ -91,7 +105,7 @@ public class AntiAura extends JavaPlugin implements Listener {
                         if(worldPvpCheck) {
                             findPlayerWorld();
                         } else {
-                            autoCheckExecute(getRandomPlayer().getName());
+                            checkExecute(getRandomPlayer().getName());
                         }
                     }
                 }
@@ -113,13 +127,13 @@ public class AntiAura extends JavaPlugin implements Listener {
             count++;
             if(player.getWorld().getPVP()) {
                 iCanHasPVP = true;
-                autoCheckExecute(player.getName());
+                checkExecute(player.getName());
             }
         }
         iCanHasPVP = false;
     }
 
-    public void autoCheckExecute(String player) {
+    public void checkExecute(String player) {
         org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "auracheck " + player);
     }
 
@@ -157,6 +171,7 @@ public class AntiAura extends JavaPlugin implements Listener {
         return null;
     }
 
+    @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length < 1) {
             return false;
@@ -209,6 +224,9 @@ public class AntiAura extends JavaPlugin implements Listener {
                 double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("settings.ticksToKill", 10) / 20);
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Check length: " + timeTaken + " seconds.");
                 if(result.getKey() >= autoBanCount) {
+                    if(notifyPermission) {
+                        Bukkit.broadcast("[AntiAura] Banning player " + player.getName() + "for going beyond AntiAura threshold.", "auracheck.check");
+                    }
                     getLogger().log(Level.INFO, "Banning player {0} for going beyond AntiAura threshold.", player.getName());
                     if(!customCommandToggle) {
                         Bukkit.getBanList(BanList.Type.NAME).addBan(player.getName(), banMessage, null, "AntiAura-AutoBan");
@@ -223,12 +241,37 @@ public class AntiAura extends JavaPlugin implements Listener {
         });
         return true;
     }
+    
+    @EventHandler
+    public void onAttack(EntityDamageByEntityEvent event) {
+        if(randomCheckOnFight) {
+            if(event.getDamager().getType() == EntityType.PLAYER && event.getEntity().getType() == EntityType.PLAYER) {
+                if(lastHit.containsKey(event.getDamager().getUniqueId())) {
+                    if((lastHit.get(event.getDamager().getUniqueId()) + fightTimeDelayTrue) < System.currentTimeMillis()) {
+                        final String name = ((Player)event.getDamager()).getName();
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                checkExecute(name);
+                            }
+                        }.runTaskLater(this, 60L); // 3 seconds after fight starts
+                    }
+                } else {
+                    lastHit.put(event.getDamager().getUniqueId(), System.currentTimeMillis());
+                }
+            }
+        }
+    }
 
     @EventHandler
     public void onDisconnect(PlayerQuitEvent event) {
         AuraCheck check = this.remove(event.getPlayer().getUniqueId());
         if (check != null) {
             check.end();
+        }
+        
+        if(lastHit.containsKey(event.getPlayer().getUniqueId())) {
+            lastHit.remove(event.getPlayer().getUniqueId());
         }
     }
 }
