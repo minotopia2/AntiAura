@@ -231,7 +231,14 @@ public class AntiAura extends JavaPlugin implements Listener {
                     if(!customCommandToggle) {
                         Bukkit.getBanList(BanList.Type.NAME).addBan(player.getName(), banMessage, null, "AntiAura-AutoBan");
                     } else {
-                        org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), customCommand.replace("%player", player.getName()));
+                        String disposableCommand = customCommand;
+                        if(customCommand.contains("%player")) {
+                            disposableCommand = disposableCommand.replace("%player", player.getName());
+                        }
+                        if(customCommand.contains("%count")) {
+                            disposableCommand = disposableCommand.replace("%count", result.getKey() + "");
+                        }
+                        org.bukkit.Bukkit.dispatchCommand(Bukkit.getConsoleSender(), disposableCommand);
                     }
                     if(!silentBan && !customCommandToggle) {
                         player.kickPlayer(kickMessage);
