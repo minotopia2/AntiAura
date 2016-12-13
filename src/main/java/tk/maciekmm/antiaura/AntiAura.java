@@ -19,8 +19,10 @@
 package tk.maciekmm.antiaura;
 
 import com.comphenix.packetwrapper.WrapperPlayClientUseEntity;
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import java.util.AbstractMap;
 import java.util.HashMap;
@@ -43,6 +45,16 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 
 public class AntiAura extends JavaPlugin implements Listener {
+
+    private static final NumberFormat NUMBER_FORMAT;
+
+    static {
+        NUMBER_FORMAT = NumberFormat.getInstance();
+        NUMBER_FORMAT.setMaximumIntegerDigits(Integer.MAX_VALUE);
+        NUMBER_FORMAT.setMinimumIntegerDigits(1);
+        NUMBER_FORMAT.setMaximumFractionDigits(2);
+        NUMBER_FORMAT.setMinimumFractionDigits(1);
+    }
 
     private HashMap<UUID, AuraCheck> running = new HashMap<>();
     private HashMap<UUID, Long> lastHit = new HashMap<>();
@@ -70,6 +82,7 @@ public class AntiAura extends JavaPlugin implements Listener {
     private long fightTimeDelayTrue;
     public static final Random RANDOM = new Random();
 
+    @Override
     public void onEnable() {
         this.saveDefaultConfig();
         total = this.getConfig().getInt("settings.amountOfFakePlayers", 16);
@@ -88,15 +101,15 @@ public class AntiAura extends JavaPlugin implements Listener {
         notifyPermission = this.getConfig().getBoolean("settings.notify-users-with-permission", false);
         randomCheckOnFight = this.getConfig().getBoolean("player-checks.on-pvp.enabled", true);
         fightTimeDelay = this.getConfig().getInt("player-checks.on-pvp.time-delay", 60);
-        
+
         fightTimeDelayTrue = fightTimeDelay * 1000L;
-        
+
         this.getServer().getPluginManager().registerEvents(this, this);
-        
+
         if(!(type.equalsIgnoreCase("running") || type.equalsIgnoreCase("standing"))) {
             type = "running";
         }
-        
+
         if(this.getConfig().getBoolean("settings.randomlyRun")) {
             Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
                 @Override
@@ -112,11 +125,11 @@ public class AntiAura extends JavaPlugin implements Listener {
             }, 800L, runEvery);
         }
     }
-    
+
     public Player getRandomPlayer() {
         return org.bukkit.Bukkit.getOnlinePlayers()[RANDOM.nextInt(Bukkit.getOnlinePlayers().length)];
     }
-    
+
     public void findPlayerWorld() {
         while(!iCanHasPVP) {
             if(count > maxToCheck) {
@@ -143,8 +156,9 @@ public class AntiAura extends JavaPlugin implements Listener {
                     @Override
                     public void onPacketReceiving(PacketEvent event) {
                         if (event.getPacketType() == WrapperPlayClientUseEntity.TYPE) {
-                            int entID = new WrapperPlayClientUseEntity(event.getPacket()).getTargetID();
-                            if (running.containsKey(event.getPlayer().getUniqueId())) {
+                            WrapperPlayClientUseEntity packet = new WrapperPlayClientUseEntity(event.getPacket());
+                            int entID = packet.getTargetID();
+                            if (running.containsKey(event.getPlayer().getUniqueId()) && packet.getType() == EntityUseAction.ATTACK) {
                                 running.get(event.getPlayer().getUniqueId()).markAsKilled(entID);
                             }
                         }
@@ -176,17 +190,46 @@ public class AntiAura extends JavaPlugin implements Listener {
         if (args.length < 1) {
             return false;
         }
+        if (args[0].equalsIgnoreCase("reload")) {
+            this.reloadConfig();
+            sender.sendMessage(ChatColor.GREEN + "AntiAura config successfully reloaded");
+            return true;
+        }
 
-        Player player = Bukkit.getPlayer(args[0]);
+        @SuppressWarnings("deprecation")
+        List<Player> playerList = Bukkit.matchPlayer(args[0]);
+        Player player;
+        if (playerList.isEmpty()) {
+            sender.sendMessage(ChatColor.RED + "Player is not online.");
+            return true;
+        } else if (playerList.size() == 1) {
+            player = playerList.get(0);
+        } else {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("[\"\",{\"text\":\"What player do you mean? (click one)\\n\",\"color\":\"green\"},");
+            for (Player p : playerList) {
+                stringBuilder.append("{\"text\":\"").append(p.getName()).append(", \",\"color\":\"blue\",\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/auracheck ").append(p.getName()).append("\"},\"hoverEvent\":{\"action\":\"show_text\",\"value\":{\"text\":\"\",\"extra\":[{\"text\":\"").append(p.getName()).append("\",\"color\":\"dark_purple\"}]}}},");
+            }
+            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+            stringBuilder.append("]");
+            String json = stringBuilder.toString();
+            PacketContainer packet = new PacketContainer(PacketType.Play.Server.CHAT);
+            packet.getChatComponents().write(0, WrappedChatComponent.fromJson(json));
+            try {
+                ProtocolLibrary.getProtocolManager().sendServerPacket((Player) sender, packet);
+            } catch (InvocationTargetException e) {
+            }
+            return true;
+        }
         if (player == null) {
-            sender.sendMessage("Player is not online.");
+            sender.sendMessage(ChatColor.RED + "Player is not online.");
             return true;
         }
 
         if (!isRegistered) {
             this.register();
         }
-        
+
         if(args.length >= 2) {
             if(args[1].equalsIgnoreCase("standing") || args[1].equalsIgnoreCase("running")) {
                 typeCmd = args[1];
@@ -196,7 +239,7 @@ public class AntiAura extends JavaPlugin implements Listener {
         } else {
             typeCmd = type;
         }
-        
+
         if(args.length >= 3) {
             if(args[2].equalsIgnoreCase("visible") || args[2].equalsIgnoreCase("invisible")) {
                 if(args[2].equalsIgnoreCase("visible")) {
@@ -221,7 +264,7 @@ public class AntiAura extends JavaPlugin implements Listener {
                     return;
                 }
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Aura check on " + player.getName() + " result: killed " + result.getKey() + " out of " + result.getValue());
-                double timeTaken = finished != Long.MAX_VALUE ? (int) ((finished - started) / 1000) : ((double) getConfig().getInt("settings.ticksToKill", 10) / 20);
+                double timeTaken = finished != Long.MAX_VALUE ? ((double) (finished - started) / 1000D) : ((double) getConfig().getInt("settings.ticksToKill", 10) / 20D);
                 invoker.sendMessage(ChatColor.DARK_PURPLE + "Check length: " + timeTaken + " seconds.");
                 if(result.getKey() >= autoBanCount) {
                     if(notifyPermission) {
@@ -248,7 +291,7 @@ public class AntiAura extends JavaPlugin implements Listener {
         });
         return true;
     }
-    
+
     @EventHandler
     public void onAttack(EntityDamageByEntityEvent event) {
         if(randomCheckOnFight) {
@@ -276,7 +319,7 @@ public class AntiAura extends JavaPlugin implements Listener {
         if (check != null) {
             check.end();
         }
-        
+
         if(lastHit.containsKey(event.getPlayer().getUniqueId())) {
             lastHit.remove(event.getPlayer().getUniqueId());
         }
