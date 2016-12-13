@@ -118,9 +118,9 @@ public class AuraCheck {
         wrapper.setYaw(0.0F);
         wrapper.setPitch(-45.0F);
         WrappedDataWatcher watcher = new WrappedDataWatcher();
-        watcher.setObject(new WrappedDataWatcherObject(0, Registry.get(Byte.class)), visOrInvisible ? (byte) 0x20 : (byte) 0);
-        watcher.setObject(new WrappedDataWatcherObject(6, Registry.get(Float.class)), 0.5F);
-        watcher.setObject(new WrappedDataWatcherObject(11, Registry.get(Byte.class)), (byte) 1);
+        watcher.setObject(new WrappedDataWatcherObject(/* status byte */ 0, Registry.get(Byte.class)), visOrInvisible ? (byte) 0x20 : (byte) 0);
+        watcher.setObject(new WrappedDataWatcherObject(/* health */ 7, Registry.get(Float.class)), 0.5F);
+        watcher.setObject(new WrappedDataWatcherObject(/* score? */12, Registry.get(Byte.class)), (byte) 1);
         wrapper.setMetadata(watcher);
         return wrapper;
     }
