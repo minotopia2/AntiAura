@@ -28,38 +28,30 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.Registry;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import java.util.*;
+
 
 public class AuraCheck {
-    public static final short[][] standing = {{0,1},{-1,0},{1,0},{0,-1},{1,1},{-1,-1},{-1,1},{1,-1}};
-    public static final short[][] running = {{0,2},{-2,0},{2,0},{0,-2},{1,1},{2,2},{-1,-1},{-2,-2},{-1,1},{-2,2},{1,-1},{2,-2}};
-
     private final AntiAura plugin;
     private Map<Integer, Boolean> entitiesSpawned = new HashMap<>();
     private CommandSender invoker;
-    private Player checked;
+    private Player targetPlayer;
     private long started;
     private long finished = Long.MAX_VALUE;
     private int i = -1;
     private int z;
 
-
-    public AuraCheck(AntiAura plugin, Player checked) {
+    public AuraCheck(AntiAura plugin, Player targetPlayer) {
         this.plugin = plugin;
-        this.checked = checked;
+        this.targetPlayer = targetPlayer;
     }
 
-    public void invoke(CommandSender player, String type, boolean visOrInvisible, final Callback callback) {
+    public void invoke(CommandSender player, boolean visOrInvisible, final Callback callback) {
         this.invoker = player;
         this.started = System.currentTimeMillis();
 
@@ -69,24 +61,24 @@ public class AuraCheck {
             double radians = Math.toRadians(degrees);
             WrapperPlayServerNamedEntitySpawn spawnWrapper;
             if (i == 1) {
-                spawnWrapper = getSpawnWrapper(this.checked.getLocation().add(0, 2, 0).toVector(), plugin);
+                spawnWrapper = getSpawnWrapper(this.targetPlayer.getLocation().add(0, 2, 0).toVector(), plugin, visOrInvisible);
             } else {
-                spawnWrapper = getSpawnWrapper(this.checked.getLocation().add(2 * Math.cos(radians), 0.2, 2 * Math.sin(radians)).toVector(), plugin);
+                spawnWrapper = getSpawnWrapper(this.targetPlayer.getLocation().add(2 * Math.cos(radians), 0.2, 2 * Math.sin(radians)).toVector(), plugin, visOrInvisible);
             }
             WrapperPlayServerPlayerInfo infoWrapper = getInfoWrapper(spawnWrapper.getPlayerUUID(), PlayerInfoAction.ADD_PLAYER);
-            infoWrapper.sendPacket(this.checked);
-            spawnWrapper.sendPacket(this.checked);
+            infoWrapper.sendPacket(this.targetPlayer);
+            spawnWrapper.sendPacket(this.targetPlayer);
             entitiesSpawned.put(spawnWrapper.getEntityID(), false);
-            WrapperPlayServerPlayerInfo RemoveinfoWrapper = getInfoWrapper(spawnWrapper.getPlayerUUID(), PlayerInfoAction.REMOVE_PLAYER);
-            RemoveinfoWrapper.sendPacket(this.checked);
+            WrapperPlayServerPlayerInfo removeInfo = getInfoWrapper(spawnWrapper.getPlayerUUID(), PlayerInfoAction.REMOVE_PLAYER);
+            removeInfo.sendPacket(this.targetPlayer);
         }
 
         Bukkit.getScheduler().runTaskLater(this.plugin, new Runnable() {
             @Override
             public void run() {
                 AbstractMap.SimpleEntry<Integer, Integer> result = end();
-                plugin.remove(checked.getUniqueId());
-                callback.done(started,finished,result,invoker,checked);
+                plugin.remove(targetPlayer.getUniqueId());
+                callback.done(started, finished, result, invoker, targetPlayer);
             }
         }, plugin.getConfig().getInt("settings.ticksToKill", 10));
     }
@@ -94,7 +86,7 @@ public class AuraCheck {
     public void markAsKilled(Integer val) {
         if (entitiesSpawned.containsKey(val)) {
             entitiesSpawned.put(val, true);
-            kill(val).sendPacket(checked);
+            kill(val).sendPacket(targetPlayer);
         }
 
         if (!entitiesSpawned.containsValue(false)) {
@@ -107,8 +99,8 @@ public class AuraCheck {
         for (Map.Entry<Integer, Boolean> entry : entitiesSpawned.entrySet()) {
             if (entry.getValue()) {
                 killed++;
-            } else if (checked.isOnline()) {
-                kill(entry.getKey()).sendPacket(checked);
+            } else if (targetPlayer.isOnline()) {
+                kill(entry.getKey()).sendPacket(targetPlayer);
             }
 
         }
@@ -134,10 +126,10 @@ public class AuraCheck {
     }
 
 
-    public static WrapperPlayServerPlayerInfo getInfoWrapper(UUID playeruuid, PlayerInfoAction action) {
+    public static WrapperPlayServerPlayerInfo getInfoWrapper(UUID playerId, PlayerInfoAction action) {
         WrapperPlayServerPlayerInfo wrapper = new WrapperPlayServerPlayerInfo();
         wrapper.setAction(action);
-        WrappedGameProfile profile = new WrappedGameProfile(playeruuid, NameGenerator.newName());
+        WrappedGameProfile profile = new WrappedGameProfile(playerId, NameGenerator.newName());
         PlayerInfoData data = new PlayerInfoData(profile, 1, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(NameGenerator.newName()));
         List<PlayerInfoData> listdata = new ArrayList<>();
         listdata.add(data);
