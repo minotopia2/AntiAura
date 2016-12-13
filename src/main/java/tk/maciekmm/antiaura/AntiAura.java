@@ -224,7 +224,7 @@ public class AntiAura extends JavaPlugin implements Listener {
         boolean visCmd;
         if (args.length >= 2) {
             if (args[1].equalsIgnoreCase("visible") || args[1].equalsIgnoreCase("invisible")) {
-                visCmd = args[1].equalsIgnoreCase("visible");
+                visCmd = !args[1].equalsIgnoreCase("visible");
             } else {
                 visCmd = visOrInvisible;
             }
